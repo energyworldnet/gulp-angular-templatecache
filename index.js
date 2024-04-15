@@ -1,24 +1,24 @@
-var mapStream = require('map-stream');
-var streamCombiner = require('stream-combiner');
-var path = require('path');
-var through2 = require('through2');
-var lodashTemplate = require('lodash.template');
-var concat = require('gulp-concat');
-var header = require('gulp-header');
-var footer = require('gulp-footer');
-var jsesc = require('jsesc');
+import mapStream from 'map-stream';
+import streamCombiner from 'stream-combiner';
+import { normalize, join, sep } from 'node:path';
+import through2 from 'through2';
+import lodashTemplate from 'lodash.template';
+import concat from 'gulp-concat';
+import header from 'gulp-header';
+import footer from 'gulp-footer';
+import jsesc from 'jsesc';
 
 /**
  * "constants"
  */
 
-var TEMPLATE_HEADER = 'angular.module(\'<%= module %>\'<%= standalone %>).run([\'$templateCache\', function($templateCache) {';
-var TEMPLATE_BODY = '$templateCache.put(\'<%= url %>\',\'<%= contents %>\');';
-var TEMPLATE_FOOTER = '}]);';
+const TEMPLATE_HEADER = 'angular.module(\'<%= module %>\'<%= standalone %>).run([\'$templateCache\', function($templateCache) {';
+const TEMPLATE_BODY = '$templateCache.put(\'<%= url %>\',\'<%= contents %>\');';
+const TEMPLATE_FOOTER = '}]);';
 
-var DEFAULT_FILENAME = 'templates.js';
-var DEFAULT_MODULE = 'templates';
-var MODULE_TEMPLATES = {
+const DEFAULT_FILENAME = 'templates.js';
+const DEFAULT_MODULE = 'templates';
+const MODULE_TEMPLATES = {
 
   requirejs: {
     header: 'define([\'angular\'], function(angular) { \'use strict\'; return ',
@@ -30,7 +30,7 @@ var MODULE_TEMPLATES = {
   },
 
   es6: {
-    header: 'import angular from \'angular\'; export default ',
+    header: 'import angular from \'angular\'; export default '
   },
 
   iife: {
@@ -44,9 +44,8 @@ var MODULE_TEMPLATES = {
  * Add files to templateCache.
  */
 
-function templateCacheFiles(root, base, templateBody, transformUrl, escapeOptions) {
-
-  return function templateCacheFile(file, callback) {
+function templateCacheFiles (root, base, templateBody, transformUrl, escapeOptions) {
+  return function templateCacheFile (file, callback) {
     if (file.processedByTemplateCache) {
       return callback(null, file);
     }
@@ -55,19 +54,19 @@ function templateCacheFiles(root, base, templateBody, transformUrl, escapeOption
       return callback(null, file);
     }
 
-    var template = templateBody || TEMPLATE_BODY;
-    var url;
+    const template = templateBody || TEMPLATE_BODY;
+    let url;
 
-    file.path = path.normalize(file.path);
+    file.path = normalize(file.path);
 
     /**
      * Rewrite url
      */
 
     if (typeof base === 'function') {
-      url = path.join(root, base(file));
+      url = join(root, base(file));
     } else {
-      url = path.join(root, file.path.replace(base || file.base, ''));
+      url = join(root, file.path.replace(base || file.base, ''));
     }
 
     if (root === '.' || root.indexOf('./') === 0) {
@@ -91,31 +90,28 @@ function templateCacheFiles(root, base, templateBody, transformUrl, escapeOption
      */
 
     file.contents = Buffer.from(lodashTemplate(template)({
-      url: url,
+      url,
       contents: jsesc(file.contents.toString('utf8'), escapeOptions),
-      file: file
+      file
     }));
 
     file.processedByTemplateCache = true;
 
     callback(null, file);
-
   };
-
 }
 
 /**
  * templateCache a stream of files.
  */
 
-function templateCacheStream(root, base, templateBody, transformUrl, escapeOptions) {
-
+function templateCacheStream (root, base, templateBody, transformUrl, escapeOptions) {
   /**
    * Set relative base
    */
 
-  if (typeof base !== 'function' && base && base.substr(-1) !== path.sep) {
-    base += path.sep;
+  if (typeof base !== 'function' && base && base.substr(-1) !== sep) {
+    base += sep;
   }
 
   /**
@@ -123,15 +119,14 @@ function templateCacheStream(root, base, templateBody, transformUrl, escapeOptio
    */
 
   return mapStream(templateCacheFiles(root, base, templateBody, transformUrl, escapeOptions));
-
 }
 
 /**
  * Wrap templateCache with module system template.
  */
 
-function wrapInModule(moduleSystem) {
-  var moduleTemplate = MODULE_TEMPLATES[moduleSystem];
+function wrapInModule (moduleSystem) {
+  const moduleTemplate = MODULE_TEMPLATES[moduleSystem];
 
   if (!moduleTemplate) {
     return through2.obj();
@@ -141,7 +136,6 @@ function wrapInModule(moduleSystem) {
     header(moduleTemplate.header || ''),
     footer(moduleTemplate.footer || '')
   );
-
 }
 
 /**
@@ -151,8 +145,7 @@ function wrapInModule(moduleSystem) {
  * @param {object} [options]
  */
 
-function templateCache(filename, options) {
-
+function templateCache (filename, options) {
   /**
    * Prepare options
    */
@@ -176,8 +169,8 @@ function templateCache(filename, options) {
    * Prepare header / footer
    */
 
-  var templateHeader = 'templateHeader' in options ? options.templateHeader : TEMPLATE_HEADER;
-  var templateFooter = 'templateFooter' in options ? options.templateFooter : TEMPLATE_FOOTER;
+  const templateHeader = 'templateHeader' in options ? options.templateHeader : TEMPLATE_HEADER;
+  const templateFooter = 'templateFooter' in options ? options.templateFooter : TEMPLATE_FOOTER;
 
   /**
    * Build templateCache
@@ -195,12 +188,10 @@ function templateCache(filename, options) {
     }),
     wrapInModule(options.moduleSystem)
   );
-
 }
-
 
 /**
  * Expose templateCache
  */
 
-module.exports = templateCache;
+export default templateCache;

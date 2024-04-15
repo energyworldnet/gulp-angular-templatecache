@@ -1,0 +1,24 @@
+{
+  "root": true,
+  "env": {
+    "browser": true,
+    "es2021": true,
+    "node": true
+  },
+  "extends": [
+    "semistandard"
+  ],
+  "ignorePatterns": ["dist/**"],
+  "overrides": [
+    {
+      "files": [
+        "**/*.spec.js",
+        "**/__tests__/**/*.{j,t}s?(x)",
+        "**/tests/unit/**/*.spec.{j,t}s?(x)"
+      ],
+      "env": {
+        "jest": true
+      }
+    }
+  ]
+}
