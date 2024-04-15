@@ -6,6 +6,28 @@ import templateCache from '../index.js';
 const { join, normalize } = path;
 
 describe('gulp-angular-templatecache', function () {
+  test('should not process the same file twice', () => new Promise(function (resolve) {
+    const stream = templateCache('templates.js');
+
+    stream.on('data', function (file) {
+      expect(normalize(file.path)).toBe(normalize(join(__dirname, 'templates.js')));
+      expect(file.relative).toBe('templates.js');
+      expect(file.contents.toString('utf8')).toBe('angular.module(\'templates\').run([\'$templateCache\', function($templateCache) {$templateCache.put(\'/template-a.html\',\'<h1 id="template-a">I\\\'m template A!</h1>\');}]);');
+      resolve();
+    });
+
+    const file = new Vinyl({
+      base: __dirname,
+      path: join(__dirname, 'template-a.html'),
+      contents: Buffer.from('<h1 id="template-a">I\'m template A!</h1>')
+    });
+
+    stream.write(file);
+    stream.write(file);
+
+    stream.end();
+  }));
+
   test('should build valid $templateCache from multiple source-files', () => new Promise(function (resolve) {
     const stream = templateCache('templates.js');
 
