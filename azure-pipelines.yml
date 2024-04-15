@@ -1,0 +1,12 @@
+trigger:
+  - ewn
+
+resources:
+  repositories:
+    - repository: recipe
+      type: github
+      name: energyworldnet/js-gulp-recipe
+      endpoint: proddev
+
+extends:
+  template: templates/library.yml@recipe
