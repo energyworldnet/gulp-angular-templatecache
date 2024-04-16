@@ -1,12 +1,12 @@
-import mapStream from 'map-stream';
-import streamCombiner from 'stream-combiner';
 import { normalize, join, sep } from 'node:path';
+import Composer from 'stream-composer';
 import through2 from 'through2';
 import lodashTemplate from 'lodash.template';
 import concat from 'gulp-concat';
 import header from 'gulp-header';
 import footer from 'gulp-footer';
 import jsesc from 'jsesc';
+import { Transform } from 'streamx';
 
 /**
  * "constants"
@@ -47,11 +47,13 @@ const MODULE_TEMPLATES = {
 function templateCacheFiles (root, base, templateBody, transformUrl, escapeOptions) {
   return function templateCacheFile (file, callback) {
     if (file.processedByTemplateCache) {
-      return callback(null, file);
+      callback();
+      return;
     }
 
     if (file.stat && file.stat.isDirectory()) {
-      return callback(null, file);
+      callback();
+      return;
     }
 
     const template = templateBody || TEMPLATE_BODY;
@@ -97,7 +99,8 @@ function templateCacheFiles (root, base, templateBody, transformUrl, escapeOptio
 
     file.processedByTemplateCache = true;
 
-    callback(null, file);
+    this.push(file);
+    callback();
   };
 }
 
@@ -118,7 +121,9 @@ function templateCacheStream (root, base, templateBody, transformUrl, escapeOpti
    * templateCache files
    */
 
-  return mapStream(templateCacheFiles(root, base, templateBody, transformUrl, escapeOptions));
+  return new Transform({
+    transform: templateCacheFiles(root, base, templateBody, transformUrl, escapeOptions)
+  });
 }
 
 /**
@@ -132,7 +137,7 @@ function wrapInModule (moduleSystem) {
     return through2.obj();
   }
 
-  return streamCombiner(
+  return Composer.pipeline(
     header(moduleTemplate.header || ''),
     footer(moduleTemplate.footer || '')
   );
@@ -176,7 +181,7 @@ function templateCache (filename, options) {
    * Build templateCache
    */
 
-  return streamCombiner(
+  return Composer.pipeline(
     templateCacheStream(options.root || '', options.base, options.templateBody, options.transformUrl, options.escapeOptions || {}),
     concat(filename),
     header(templateHeader, {
